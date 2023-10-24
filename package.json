@@ -1,0 +1,19 @@
+{
+  "name": "costco-checker",
+  "version": "1.0.0",
+  "description": "Check Costco for my items!",
+  "main": "main.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@types/nodemailer": "^6.4.13",
+    "nodemailer": "^6.9.7",
+    "playwright": "^1.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.7"
+  }
+}
