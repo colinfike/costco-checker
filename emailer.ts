@@ -10,6 +10,11 @@ const SENDING_ADDRESS = 'costcochecker123@gmail.com';
 const FORMATTED_SENDING_ADDRESS = `Costco Checker <${SENDING_ADDRESS}>`;
 const RECIPIENT_ADDRESSES = process.env.RECIPIENT_ADDRESSES?.split(',');
 
+export type FormattedItem = {
+  searchQuery: string;
+  attachments: Mail.Attachment[];
+};
+
 const generateTransport = () =>
   nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -24,19 +29,18 @@ const generateTransport = () =>
     },
   });
 
-export const sendEmailWithImages = async (
-  body: string,
-  scrapeResult: ScrapeResult
-) => {
+// TODO: Could decouple the emailer from the scraper by not using the ScrapeResult type and having the invoker of
+// sendEmailWithImages handle transforming the result of the scraper for usage here. OK for now though.
+export const sendEmailWithImages = async (scrapeResult: ScrapeResult) => {
   const transporter = generateTransport();
 
-  const formattedImages: FormattedSearchResults[] = scrapeResult.map(
+  const formattedItems: FormattedItem[] = scrapeResult.map(
     (searchQueryResult, i) => {
       return {
         searchQuery: searchQueryResult.searchQuery,
-        images: searchQueryResult.images.map((imageBuffer) => {
+        attachments: searchQueryResult.images.map((imageBuffer) => {
           return {
-            filename: `image-${i}.png`,
+            filename: `${searchQueryResult.searchQuery}-${i}.png`,
             content: imageBuffer,
             cid: `costco-${i}`,
           };
@@ -44,42 +48,38 @@ export const sendEmailWithImages = async (
       };
     }
   );
-
-  const email = generateSummaryEmail(formattedImages);
+  const email = generateItemSummaryEmail(formattedItems);
 
   await transporter.sendMail({
     from: FORMATTED_SENDING_ADDRESS,
     to: RECIPIENT_ADDRESSES,
     html: email,
     subject: `Costco Checker Results for ${new Date().toDateString()}`,
-    attachments: formattedImages.reduce((result, formattedImage) => {
-      return [...result, ...formattedImage.images];
+    attachments: formattedItems.reduce((result, formattedImage) => {
+      return [...result, ...formattedImage.attachments];
     }, [] as Mail.Attachment[]),
   });
 };
 
-export type FormattedSearchResults = {
-  searchQuery: string;
-  images: Mail.Attachment[];
+// This should probably be pulled out into a separate class and resulting HTML passed into the emailer instead of being generated here
+const generateItemSummaryEmail = (formattedImages: FormattedItem[]) => {
+  return `<html>${genereateItemSummaries(formattedImages)}</html>`;
 };
 
-const generateSummaryEmail = (formattedImages: FormattedSearchResults[]) => {
-  return `<html>${generateResultSummaries(formattedImages)}</html>`;
-};
-
-const generateResultSummaries = (formattedImages: FormattedSearchResults[]) => {
-  let summaries = '';
-  for (const formattedImage of formattedImages) {
-    const imageHtml = generateImageHtml(formattedImage.images);
-    summaries += `<p>Results for <b>${formattedImage.searchQuery}</b></p>${imageHtml}`;
-  }
-  return summaries;
+const genereateItemSummaries = (formattedImages: FormattedItem[]) => {
+  return formattedImages.reduce((summaryHtml, formattedImage) => {
+    const imageHtml = generateImageHtml(formattedImage.attachments);
+    return (
+      summaryHtml +
+      `<p>Results for <b>${formattedImage.searchQuery}</b></p>${imageHtml}`
+    );
+  }, '');
 };
 
 const generateImageHtml = (images: Mail.Attachment[]) => {
-  let imageHtml = '';
-  for (const image of images) {
-    imageHtml += `<p><img src="cid:${image.cid}"/></p>`;
-  }
-  return imageHtml;
+  return images.reduce(
+    (currentHtml, image) =>
+      (currentHtml += `<p><img src="cid:${image.cid}"/></p>`),
+    ''
+  );
 };

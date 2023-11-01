@@ -18,9 +18,7 @@ const main = async () => {
 
   console.log(`Running Costco Checker with ${QUERY_STRINGS}...`);
   const availableItemImages = await fetchImagesForQueryStrings(QUERY_STRINGS);
-  const emailBody = `${availableItemImages.length} items have been found!`;
-
-  await sendEmailWithImages(emailBody, availableItemImages);
+  await sendEmailWithImages(availableItemImages);
 };
 
 main()
@@ -29,9 +27,3 @@ main()
     console.error('Error found running Costco Checker');
     console.error(err);
   });
-
-/**
- * TODO
- * 1. Update email to have more information
- * 2. Update the prompts
- */
