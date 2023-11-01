@@ -18,9 +18,7 @@ const main = async () => {
 
   console.log(`Running Costco Checker with ${QUERY_STRINGS}...`);
   const availableItemImages = await fetchImagesForQueryStrings(QUERY_STRINGS);
-  const emailBody = `${availableItemImages.length} items have been found!`;
-
-  await sendEmailWithImages(emailBody, availableItemImages);
+  await sendEmailWithImages(availableItemImages);
 };
 
 main()
