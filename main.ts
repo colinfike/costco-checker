@@ -29,3 +29,9 @@ main()
     console.error('Error found running Costco Checker');
     console.error(err);
   });
+
+/**
+ * TODO
+ * 1. Update email to have more information
+ * 2. Update the prompts
+ */

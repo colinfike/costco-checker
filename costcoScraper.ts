@@ -5,11 +5,20 @@ const ZIPCODE_FIELD_PLACEHOLDER = 'Enter ZIP code';
 const HOME_ZIPCODE = '94110';
 const SEARCHBAR_PLACEHOLDER = 'Search Costco...';
 
+// TODO: Would do well being converted into a class
+
+export type ScrapeResult = SearchQueryResult[];
+
+export type SearchQueryResult = {
+  searchQuery: string;
+  images: Buffer[];
+};
+
 export const fetchImagesForQueryStrings = async (
   queryStrings: string[]
-): Promise<Buffer[]> => {
+): Promise<ScrapeResult> => {
   // Navigate to Costco Instacart page
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: false, slowMo: 500 });
   const page = await browser.newPage();
   await page.goto(COSTCO_SAMEDAY_URL);
 
@@ -21,10 +30,11 @@ export const fetchImagesForQueryStrings = async (
   const submitButton = await page.locator('BUTTON[type="submit"]');
   await submitButton.click();
 
-  const matchedItemImages: Buffer[] = [];
+  const scrapeResult: ScrapeResult = [];
   // Search for for query strings and take screenshot of any found elements for later review.
   // TODO: Probably cleaner to make a class and break up this function.
   for (const queryString of queryStrings) {
+    const matchedItemImages: Buffer[] = [];
     const searchCostcoField = await page.getByPlaceholder(
       SEARCHBAR_PLACEHOLDER
     );
@@ -32,6 +42,7 @@ export const fetchImagesForQueryStrings = async (
     await searchCostcoField.press('Enter');
 
     const queryStringRegex = new RegExp(queryString, 'i');
+    console.log(queryStringRegex);
     const matchedItems = page
       .getByRole('button')
       .filter({ hasText: queryStringRegex });
@@ -42,6 +53,18 @@ export const fetchImagesForQueryStrings = async (
     } catch (err: any) {
       if (err.name === 'TimeoutError') {
         console.log(`TimeoutError encountered looking for ${queryString}`);
+        // If a timeout error is encountered, we need to reset the page otherwise subsequent searches do not work
+        // await page.screenshot({
+        //   path: `beforescreenshot${Math.random()}.png`,
+        //   fullPage: true,
+        // });
+
+        // await page.goto(COSTCO_SAMEDAY_URL);
+        // await page.screenshot({
+        //   path: `afterscreenshot${Math.random()}.png`,
+        //   fullPage: true,
+        // });
+
         continue;
       }
     }
@@ -49,9 +72,14 @@ export const fetchImagesForQueryStrings = async (
     for (let i = 0; i < (await matchedItems.count()); i++) {
       matchedItemImages.push(await matchedItems.nth(i).screenshot());
     }
+
+    scrapeResult.push({
+      searchQuery: queryString,
+      images: matchedItemImages,
+    });
   }
 
   await browser.close();
 
-  return matchedItemImages;
+  return scrapeResult;
 };
