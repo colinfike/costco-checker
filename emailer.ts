@@ -11,7 +11,7 @@ const FORMATTED_SENDING_ADDRESS = `Costco Checker <${SENDING_ADDRESS}>`;
 const RECIPIENT_ADDRESSES = process.env.RECIPIENT_ADDRESSES?.split(',');
 
 export type FormattedItem = {
-  searchQuery: string;
+  name: string;
   attachments: Mail.Attachment[];
 };
 
@@ -37,7 +37,7 @@ export const sendEmailWithImages = async (scrapeResult: ScrapeResult) => {
   const formattedItems: FormattedItem[] = scrapeResult.map(
     (searchQueryResult, i) => {
       return {
-        searchQuery: searchQueryResult.searchQuery,
+        name: searchQueryResult.searchQuery,
         attachments: searchQueryResult.images.map((imageBuffer) => {
           return {
             filename: `${searchQueryResult.searchQuery}-${i}.png`,
@@ -55,8 +55,8 @@ export const sendEmailWithImages = async (scrapeResult: ScrapeResult) => {
     to: RECIPIENT_ADDRESSES,
     html: email,
     subject: `Costco Checker Results for ${new Date().toDateString()}`,
-    attachments: formattedItems.reduce((result, formattedImage) => {
-      return [...result, ...formattedImage.attachments];
+    attachments: formattedItems.reduce((result, formattedItem) => {
+      return [...result, ...formattedItem.attachments];
     }, [] as Mail.Attachment[]),
   });
 };
@@ -66,12 +66,12 @@ const generateItemSummaryEmail = (formattedImages: FormattedItem[]) => {
   return `<html>${genereateItemSummaries(formattedImages)}</html>`;
 };
 
-const genereateItemSummaries = (formattedImages: FormattedItem[]) => {
-  return formattedImages.reduce((summaryHtml, formattedImage) => {
-    const imageHtml = generateImageHtml(formattedImage.attachments);
+const genereateItemSummaries = (formattedItems: FormattedItem[]) => {
+  return formattedItems.reduce((summaryHtml, formattedItem) => {
+    const imageHtml = generateImageHtml(formattedItem.attachments);
     return (
       summaryHtml +
-      `<p>Results for <b>${formattedImage.searchQuery}</b></p>${imageHtml}`
+      `<p>Results for <b>${formattedItem.name}</b></p>${imageHtml}`
     );
   }, '');
 };
